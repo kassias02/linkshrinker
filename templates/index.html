@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkShrinker - Shorten Your Links</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #ffeeee, #c3cfe2);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 60px;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 90%;
+            width: 700px;
+        }
+        .logo {
+            font-size: 3em;
+            font-weight: bold;
+            color: #ff5555;
+            margin-bottom: 10px;
+        }
+        .logo span {
+            color: #333;
+            font-style: italic;
+        }
+        .tagline {
+            color: #666;
+            font-size: 1.4em;
+            margin-bottom: 30px;
+        }
+        p {
+            color: #666;
+            font-size: 1.2em;
+            margin: 10px 0;
+        }
+        form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 30px;
+            justify-content: center;
+        }
+        input[type="text"] {
+            flex: 1;
+            min-width: 300px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1.2em;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus {
+            border-color: #ff5555;
+        }
+        button {
+            padding: 15px 30px;
+            background: #ff5555;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #cc4444;
+        }
+        .ad-space {
+            margin-top: 40px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            font-size: 1em;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">Link<span>Shrinker</span></div>
+        <div class="tagline">Short Links. Trusted Previews. Easy Sharing.</div>
+        <p>Free forever – no account required!</p>
+        <p>Give your links a preview for trust.</p>
+        <form method="POST" action="/">
+            <input type="text" name="url" placeholder="Enter your URL (e.g., https://example.com)" required>
+            <input type="text" name="alias" placeholder="Custom alias (optional, e.g., mylink)">
+            <button type="submit">Shrink It</button>
+        </form>
+        <div class="ad-space">Ad Space – Your banner here!</div>
+    </div>
+</body>
+</html>

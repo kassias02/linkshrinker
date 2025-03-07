@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Short Link - LinkShrinker</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #ffeeee, #c3cfe2);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 60px;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 90%;
+            width: 700px;
+        }
+        .logo {
+            font-size: 3em;
+            font-weight: bold;
+            color: #ff5555;
+            margin-bottom: 10px;
+        }
+        .logo span {
+            color: #333;
+            font-style: italic;
+        }
+        .tagline {
+            color: #666;
+            font-size: 1.4em;
+            margin-bottom: 30px;
+        }
+        .link-area {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin: 30px 0;
+        }
+        a.short-link {
+            color: #ff5555;
+            font-size: 1.4em;
+            text-decoration: none;
+            position: relative;
+            padding: 8px 15px;
+            background: #fff0f0;
+            border-radius: 8px;
+        }
+        .tooltip {
+            display: none;
+            position: absolute;
+            top: -220px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fff;
+            padding: 20px;
+            max-width: 350px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+            font-size: 1em;
+            color: #333;
+            text-align: left;
+            transition: opacity 0.2s;
+            opacity: 0;
+            border-radius: 0;
+        }
+        .tooltip img {
+            max-width: 180px;
+            margin-top: 10px;
+        }
+        a.short-link:hover .tooltip {
+            display: block;
+            opacity: 1;
+        }
+        button.copy-btn, button.share-btn {
+            padding: 10px 20px;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.3s;
+        }
+        button.copy-btn {
+            background: #28a745;
+        }
+        button.copy-btn:hover {
+            background: #218838;
+            transform: scale(1.05);
+        }
+        button.share-btn {
+            background: #ff5555;
+            position: relative;
+        }
+        button.share-btn:hover {
+            background: #cc4444;
+            transform: scale(1.05);
+        }
+        .share-dropdown {
+            display: none;
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+            padding: 10px;
+        }
+        .share-dropdown a {
+            display: block;
+            padding: 8px 15px;
+            color: #333;
+            text-decoration: none;
+            font-size: 1em;
+            transition: background 0.3s;
+        }
+        .share-dropdown a:hover {
+            background: #f0f0f0;
+        }
+        .back-link {
+            margin-top: 20px;
+            display: inline-block;
+            color: #ff5555;
+            font-size: 1.2em;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .ad-space {
+            margin-top: 40px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            font-size: 1em;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">Link<span>Shrinker</span></div>
+        <div class="tagline">Short Links. Trusted Previews. Easy Sharing.</div>
+        <p>Hover over the link to see a preview:</p>
+        <div class="link-area">
+            <a href="{{ short_url }}" class="short-link" id="short-link">{{ short_url }}
+                <div class="tooltip" id="preview-tooltip">
+                    <p><strong>Title:</strong> <span id="preview-title">{{ preview.title }}</span></p>
+                    <p><strong>Description:</strong> <span id="preview-desc">{{ preview.description }}</span></p>
+                    {% if preview.image %}
+                        <img src="{{ preview.image }}" alt="Preview image">
+                    {% endif %}
+                </div>
+            </a>
+            <button class="copy-btn" onclick="copyToClipboard('{{ short_url }}')">Copy</button>
+            <button class="share-btn" onclick="toggleShareDropdown()">Share</button>
+            <div class="share-dropdown" id="share-dropdown">
+                <a href="https://twitter.com/intent/tweet?url={{ short_url | urlencode }}" target="_blank">Twitter</a>
+                <a href="https://www.facebook.com/sharer/sharer.php?u={{ short_url | urlencode }}" target="_blank">Facebook</a>
+                <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ short_url | urlencode }}" target="_blank">LinkedIn</a>
+            </div>
+        </div>
+        <p><a href="/" class="back-link">Shrink another link</a></p>
+        <div class="ad-space">Ad Space – Your banner here!</div>
+    </div>
+
+    <script>
+        const previewData = {{ preview_json | safe }};
+        const tooltip = document.getElementById('preview-tooltip');
+        const title = document.getElementById('preview-title');
+        const desc = document.getElementById('preview-desc');
+        const shareDropdown = document.getElementById('share-dropdown');
+
+        title.textContent = previewData.title;
+        desc.textContent = previewData.description;
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Link copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+
+        function toggleShareDropdown() {
+            shareDropdown.style.display = shareDropdown.style.display === 'block' ? 'none' : 'block';
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.share-btn') && !event.target.closest('.share-dropdown')) {
+                shareDropdown.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
