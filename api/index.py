@@ -5,12 +5,10 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import sqlite3
-import os
 
-app = Flask(__name__, template_folder='/Users/hassan/Downloads/SHrinklin/templates')
+app = Flask(__name__, template_folder='../templates')
 
-# Use Heroku's tmp dir for SQLite (ephemeral for now)
-DB_PATH = 'links.db'
+DB_PATH = 'links.db'  # Ephemeral on Vercel
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -30,10 +28,8 @@ def get_preview_data(url):
         response = requests.get(url, timeout=5)
         soup = BeautifulSoup(response.text, 'html.parser')
         title = soup.title.string if soup.title else "No Title"
-        description = soup.find('meta', attrs={'name': 'description'})
-        desc = description['content'] if description else "No description available"
-        image = soup.find('meta', attrs={'property': 'og:image'})
-        img = image['content'] if image else None
+        desc = soup.find('meta', attrs={'name': 'description'})['content'] if soup.find('meta', attrs={'name': 'description'}) else "No description"
+        img = soup.find('meta', attrs={'property': 'og:image'})['content'] if soup.find('meta', attrs={'property': 'og:image'}) else None
         return {'title': title, 'description': desc, 'image': img}
     except Exception:
         return {'title': 'Error', 'description': 'Unable to load preview', 'image': None}
@@ -43,15 +39,13 @@ def home():
     if request.method == 'POST':
         long_url = request.form['url']
         alias = request.form.get('alias', '').strip()
-        
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
-        
         if alias:
             c.execute("SELECT short_code FROM links WHERE short_code = ?", (alias,))
             if c.fetchone():
                 conn.close()
-                return render_template('index.html', error="Alias already taken, try another!")
+                return render_template('index.html', error="Alias already taken!")
             short_code = alias
         else:
             short_code = generate_short_code()
@@ -59,16 +53,13 @@ def home():
             while c.fetchone():
                 short_code = generate_short_code()
                 c.execute("SELECT short_code FROM links WHERE short_code = ?", (short_code,))
-
         preview = get_preview_data(long_url)
         preview_json = json.dumps(preview)
-        
-        c.execute("INSERT INTO links (short_code, url, preview) VALUES (?, ?, ?)",
+        c.execute("INSERT INTO links (short_code, url, preview) VALUES (?, ?, ?)", 
                   (short_code, long_url, preview_json))
         conn.commit()
         conn.close()
-        
-        short_url = f"https://{request.host}/{short_code}" if 'herokuapp' in request.host else f"http://127.0.0.1:5000/{short_code}"
+        short_url = f"https://{request.host}/{short_code}"
         return render_template('result.html', short_url=short_url, preview=preview, preview_json=preview_json)
     return render_template('index.html')
 
@@ -83,6 +74,6 @@ def redirect_link(short_code):
         return redirect(result[0], code=302)
     return "Link not found", 404
 
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))  # Heroku dynamic port
-    app.run(host="0.0.0.0", port=port, debug=True)
+# Vercel serverless handler
+def handler(request):
+    return app(request.environ, lambda status, headers: request.send_response(status, headers))
