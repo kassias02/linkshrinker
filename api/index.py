@@ -9,22 +9,32 @@ import sqlite3
 
 app = Flask(__name__)
 
-# Inline templates
+# Inline templates with colors and styling
 INDEX_HTML = '''
 <!DOCTYPE html>
 <html>
 <head>
     <title>LinkShrinker</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background-color: #f0f0f0; }
+        h1 { color: #333; }
+        input[type="url"], input[type="text"] { padding: 10px; margin: 5px; width: 300px; }
+        button { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #45a049; }
+        .error { color: red; }
+    </style>
 </head>
 <body>
     <h1>LinkShrinker</h1>
     <form method="post">
         <input type="url" name="url" placeholder="Enter URL" required>
+        <br>
         <input type="text" name="alias" placeholder="Custom Alias (optional)">
+        <br>
         <button type="submit">Shrink</button>
     </form>
     {% if error %}
-        <p style="color: red;">{{ error }}</p>
+        <p class="error">{{ error }}</p>
     {% endif %}
 </body>
 </html>
@@ -35,6 +45,13 @@ RESULT_HTML = '''
 <html>
 <head>
     <title>Shortened URL</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background-color: #f0f0f0; }
+        h1 { color: #333; }
+        a { color: #0066cc; text-decoration: none; font-size: 20px; }
+        a:hover { text-decoration: underline; }
+        p { margin: 10px 0; }
+    </style>
 </head>
 <body>
     <h1>Your Shortened URL</h1>
