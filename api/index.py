@@ -121,27 +121,38 @@ def redirect_link(short_code):
 
 # Vercel handler
 def handler(event, context):
-    from flask import Response
-    import sys
-    from io import StringIO
-    
-    # Capture Flask output
-    old_stdout = sys.stdout
-    sys.stdout = StringIO()
-    
-    # Run Flask app
-    response = app(event['requestContext']['http'], lambda status, headers: None)
-    
-    # Get response body
-    body = sys.stdout.getvalue()
-    sys.stdout = old_stdout
-    
-    # Extract status and headers from Flask response
-    status_code = int(response.status.split()[0])
-    headers = dict(response.headers)
-    
+    from wsgi import make_wsgi_callable
+    wsgi_app = make_wsgi_callable(app)
+    environ = {
+        'REQUEST_METHOD': event.get('httpMethod', 'GET'),
+        'PATH_INFO': event.get('path', '/'),
+        'QUERY_STRING': event.get('queryString', ''),
+        'SERVER_NAME': 'vercel',
+        'SERVER_PORT': '443',
+        'SERVER_PROTOCOL': 'HTTP/1.1',
+        'wsgi.version': (1, 0),
+        'wsgi.url_scheme': 'https',
+        'wsgi.input': StringIO(event.get('body', '')),
+        'wsgi.errors': sys.stderr,
+        'wsgi.multithread': False,
+        'wsgi.multiprocess': False,
+        'wsgi.run_once': False,
+    }
+    if event.get('headers'):
+        for key, value in event['headers'].items():
+            environ[f'HTTP_{key.upper().replace("-", "_")}'] = value
+
+    def start_response(status, headers):
+        nonlocal response_status, response_headers
+        response_status = status
+        response_headers = headers
+
+    response_status = None
+    response_headers = []
+    response_body = ''.join(wsgi_app(environ, start_response))
+
     return {
-        'statusCode': status_code,
-        'headers': headers,
-        'body': body
+        'statusCode': int(response_status.split()[0]),
+        'headers': dict(response_headers),
+        'body': response_body
     }
