@@ -11,8 +11,14 @@ app = Flask(__name__)
 
 INDEX_HTML = '''
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Shrink long URLs instantly with LinkShrinker. Fast, free, and reliable link shortener with preview.">
+    <meta name="keywords" content="best URL shortener, free link shrinker, shorten URL, link preview, fast URL shortener">
+    <meta name="author" content="LinkShrinker Team">
+    <meta name="robots" content="index, follow">
     <title>LinkShrinker - Free URL Shortener</title>
     <link rel="icon" href="https://via.placeholder.com/32?text=LS" type="image/png">
     <style>
@@ -98,8 +104,14 @@ INDEX_HTML = '''
 
 RESULT_HTML = '''
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Your shortened URL from LinkShrinker. Fast, free, and reliable with a preview.">
+    <meta name="keywords" content="best URL shortener, free link shrinker, shorten URL, link preview">
+    <meta name="author" content="LinkShrinker Team">
+    <meta name="robots" content="index, follow">
     <title>Your Short Link - LinkShrinker</title>
     <link rel="icon" href="https://via.placeholder.com/32?text=LS" type="image/png">
     <style>
