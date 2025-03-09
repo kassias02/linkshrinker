@@ -1,25 +1,67 @@
-from flask import Flask, 
-request, redirect, render_template
+from flask import Flask, request, redirect, render_template_string
 import random
 import string
 import requests
 from bs4 import BeautifulSoup
 import json
 import sqlite3
+import os
 
-app = Flask(__name__, template_folder='templates')
+app = Flask(__name__)
 
-DB_PATH = 'links.db'  # Ephemeral on Vercel
+# Inline templates (Vercel-compatible)
+INDEX_HTML = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LinkShrinker</title>
+</head>
+<body>
+    <h1>LinkShrinker</h1>
+    <form method="post">
+        <input type="url" name="url" placeholder="Enter URL" required>
+        <input type="text" name="alias" placeholder="Custom Alias (optional)">
+        <button type="submit">Shrink</button>
+    </form>
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+</body>
+</html>
+'''
+
+RESULT_HTML = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shortened URL</title>
+</head>
+<body>
+    <h1>Your Shortened URL</h1>
+    <p><a href="{{ short_url }}" target="_blank">{{ short_url }}</a></p>
+    <p>Preview: {{ preview.title }}</p>
+</body>
+</html>
+'''
+
+DB_PATH = '/tmp/links.db'  # Vercel’s writable dir
 
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS links 
-                 (short_code TEXT PRIMARY KEY, url TEXT, preview TEXT)''')
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS links 
+                     (short_code TEXT PRIMARY KEY, url TEXT, preview TEXT)''')
+        conn.commit()
+    except sqlite3.OperationalError as e:
+        print(f"DB init failed: {e}")
+    finally:
+        conn.close()
 
-init_db()
+# Call init_db() lazily, not at startup
+def get_db_connection():
+    conn = sqlite3.connect(DB_PATH)
+    return conn
 
 def generate_short_code():
     return ''.join(random.choices(string.ascii_letters + string.digits, k=6))
@@ -37,16 +79,20 @@ def get_preview_data(url):
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
+    # Initialize DB on first request
+    if not os.path.exists(DB_PATH):
+        init_db()
+    
     if request.method == 'POST':
         long_url = request.form['url']
         alias = request.form.get('alias', '').strip()
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         c = conn.cursor()
         if alias:
             c.execute("SELECT short_code FROM links WHERE short_code = ?", (alias,))
             if c.fetchone():
                 conn.close()
-                return render_template('index.html', error="Alias already taken!")
+                return render_template_string(INDEX_HTML, error="Alias already taken!")
             short_code = alias
         else:
             short_code = generate_short_code()
@@ -56,17 +102,17 @@ def home():
                 c.execute("SELECT short_code FROM links WHERE short_code = ?", (short_code,))
         preview = get_preview_data(long_url)
         preview_json = json.dumps(preview)
-        c.execute("INSERT INTO links (short_code, url, preview) VALUES (?, ?, ?)", 
+        c.execute("INSERT OR IGNORE INTO links (short_code, url, preview) VALUES (?, ?, ?)", 
                   (short_code, long_url, preview_json))
         conn.commit()
         conn.close()
         short_url = f"https://{request.host}/{short_code}"
-        return render_template('result.html', short_url=short_url, preview=preview, preview_json=preview_json)
-    return render_template('index.html')
+        return render_template_string(RESULT_HTML, short_url=short_url, preview=preview)
+    return render_template_string(INDEX_HTML)
 
 @app.route('/<short_code>')
 def redirect_link(short_code):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     c = conn.cursor()
     c.execute("SELECT url FROM links WHERE short_code = ?", (short_code,))
     result = c.fetchone()
@@ -75,6 +121,6 @@ def redirect_link(short_code):
         return redirect(result[0], code=302)
     return "Link not found", 404
 
-# Vercel serverless handler
-def handler(request):
-    return app(request.environ, lambda status, headers: request.send_response(status, headers))
+def handler(event, context):
+    from wsgiref.handlers import CGIHandler
+    return CGIHandler().run(app)
