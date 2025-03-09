@@ -9,6 +9,7 @@ import sqlite3
 
 app = Flask(__name__)
 
+# Existing Templates
 INDEX_HTML = '''
 <!DOCTYPE html>
 <html lang="en">
@@ -262,6 +263,30 @@ RESULT_HTML = '''
 </html>
 '''
 
+# New Templates for SEO (Add Here)
+SITEMAP_XML = '''<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://{{ host }}</loc>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
+    {% for link in links %}
+    <url>
+        <loc>https://{{ host }}/{{ link.short_code }}</loc>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    {% endfor %}
+</urlset>
+'''
+
+ROBOTS_TXT = '''
+User-agent: *
+Disallow:
+Sitemap: https://{{ host }}/sitemap.xml
+'''
+
 DB_PATH = '/tmp/links.db'
 
 def init_db():
@@ -368,3 +393,17 @@ def redirect_link(short_code):
         return redirect(result[0], code=302)
     conn.close()
     return "Link not found", 404
+
+# New Routes for SEO (Add Here)
+@app.route('/sitemap.xml')
+def sitemap():
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT short_code FROM links")
+    links = c.fetchall()
+    conn.close()
+    return render_template_string(SITEMAP_XML, host=request.host, links=links), {'Content-Type': 'application/xml'}
+
+@app.route('/robots.txt')
+def robots():
+    return render_template_string(ROBOTS_TXT, host=request.host), {'Content-Type': 'text/plain'}
