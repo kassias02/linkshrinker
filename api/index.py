@@ -9,7 +9,7 @@ import sqlite3
 
 app = Flask(__name__)
 
-# Inline templates with corrected colors and styling
+# Inline templates with improved preview
 INDEX_HTML = '''
 <!DOCTYPE html>
 <html>
@@ -50,8 +50,9 @@ RESULT_HTML = '''
         h1 { color: #333; font-weight: bold; }
         a { color: #0000ff; text-decoration: none; font-size: 18px; }
         a:hover { text-decoration: underline; }
-        .preview { margin-top: 20px; }
-        .preview img { max-width: 300px; }
+        .preview { margin-top: 20px; max-width: 500px; margin-left: auto; margin-right: auto; }
+        .preview img { max-width: 300px; border: 1px solid #ccc; }
+        .preview p { margin: 5px 0; word-wrap: break-word; }
         button { padding: 8px 16px; background-color: #00ff00; color: #000; border: none; cursor: pointer; }
         button:hover { background-color: #00cc00; }
     </style>
@@ -71,6 +72,11 @@ RESULT_HTML = '''
         <p><strong>Description:</strong> {{ preview.description }}</p>
         {% if preview.image %}
             <img src="{{ preview.image }}" alt="Preview Image">
+        {% else %}
+            <img src="https://via.placeholder.com/150?text=No+Image" alt="No Image Available">
+        {% endif %}
+        {% if preview.error %}
+            <p style="color: #ff0000;">Preview Error: {{ preview.error }}</p>
         {% endif %}
     </div>
 </body>
@@ -103,17 +109,47 @@ def generate_short_code():
 
 def get_preview_data(url):
     try:
-        response = requests.get(url, timeout=5)
+        # Set a user-agent to avoid blocks
+        headers = {'User-Agent': 'Mozilla/5.0 (compatible; LinkShrinker/1.0)'}
+        response = requests.get(url, timeout=5, headers=headers)
+        response.raise_for_status()  # Raise exception for bad status codes
         soup = BeautifulSoup(response.text, 'html.parser')
-        title = soup.title.string.strip() if soup.title else "No Title"
-        desc = soup.find('meta', attrs={'name': 'description'})
-        desc = desc['content'].strip() if desc else "No description available"
+
+        # Title: OG or HTML fallback
+        title = soup.find('meta', attrs={'property': 'og:title'})
+        title = title['content'].strip() if title else soup.title.string.strip() if soup.title else "No Title"
+        if len(title) > 100:
+            title = title[:97] + "..."
+
+        # Description: OG, meta, or first paragraph
+        desc = soup.find('meta', attrs={'property': 'og:description'})
+        if not desc:
+            desc = soup.find('meta', attrs={'name': 'description'})
+        if desc:
+            desc = desc['content'].strip()
+        else:
+            p = soup.find('p')
+            desc = p.text.strip() if p else "No description available"
+        if len(desc) > 200:
+            desc = desc[:197] + "..."
+
+        # Image: OG or first img tag
         img = soup.find('meta', attrs={'property': 'og:image'})
-        img = img['content'] if img else None
-        return {'title': title, 'description': desc, 'image': img}
+        if img:
+            img = img['content']
+        else:
+            img_tag = soup.find('img')
+            img = img_tag['src'] if img_tag else None
+
+        return {'title': title, 'description': desc, 'image': img, 'error': None}
+    except requests.RequestException as e:
+        error_msg = f"Failed to fetch preview: {str(e)}"
+        print(error_msg)
+        return {'title': 'Error', 'description': 'Unable to load preview', 'image': None, 'error': error_msg}
     except Exception as e:
-        print(f"Preview error: {e}")
-        return {'title': 'Error', 'description': 'Unable to load preview', 'image': None}
+        error_msg = f"Preview parsing error: {str(e)}"
+        print(error_msg)
+        return {'title': 'Error', 'description': 'Unable to load preview', 'image': None, 'error': error_msg}
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
