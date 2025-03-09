@@ -9,12 +9,12 @@ import sqlite3
 
 app = Flask(__name__)
 
-# Templates with modern, professional design
 INDEX_HTML = '''
 <!DOCTYPE html>
 <html>
 <head>
     <title>LinkShrinker - Free URL Shortener</title>
+    <link rel="icon" href="https://via.placeholder.com/32?text=LS" type="image/png">
     <style>
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
@@ -101,6 +101,7 @@ RESULT_HTML = '''
 <html>
 <head>
     <title>Your Short Link - LinkShrinker</title>
+    <link rel="icon" href="https://via.placeholder.com/32?text=LS" type="image/png">
     <style>
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
@@ -192,6 +193,7 @@ RESULT_HTML = '''
             background-color: #ecf0f1;
             color: #333;
             padding: 8px;
+            margin: 5px;
         }
         .share-options button:hover {
             background-color: #dcdcdc;
