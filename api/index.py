@@ -6,6 +6,8 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import sqlite3
+from io import StringIO
+import sys
 
 app = Flask(__name__)
 
@@ -121,13 +123,13 @@ def redirect_link(short_code):
 
 # Vercel handler
 def handler(event, context):
-    from wsgi import make_wsgi_callable
-    wsgi_app = make_wsgi_callable(app)
+    # Build WSGI environ
     environ = {
         'REQUEST_METHOD': event.get('httpMethod', 'GET'),
         'PATH_INFO': event.get('path', '/'),
-        'QUERY_STRING': event.get('queryString', ''),
-        'SERVER_NAME': 'vercel',
+        'QUERY_STRING': '&'.join(f"{k}={v}" for k, v in event.get('queryStringParameters', {}).items()) if event.get('queryStringParameters') else '',
+        'CONTENT_LENGTH': str(len(event.get('body', ''))),
+        'SERVER_NAME': event.get('headers', {}).get('host', 'vercel'),
         'SERVER_PORT': '443',
         'SERVER_PROTOCOL': 'HTTP/1.1',
         'wsgi.version': (1, 0),
@@ -142,17 +144,28 @@ def handler(event, context):
         for key, value in event['headers'].items():
             environ[f'HTTP_{key.upper().replace("-", "_")}'] = value
 
+    # Capture response
+    response_body = []
+    response_status = None
+    response_headers = []
+
     def start_response(status, headers):
         nonlocal response_status, response_headers
         response_status = status
         response_headers = headers
 
-    response_status = None
-    response_headers = []
-    response_body = ''.join(wsgi_app(environ, start_response))
+    # Run Flask app
+    try:
+        response_body = app(environ, start_response)
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': {'Content-Type': 'text/plain'},
+            'body': f"Internal Server Error: {str(e)}"
+        }
 
     return {
-        'statusCode': int(response_status.split()[0]),
+        'statusCode': int(response_status.split()[0]) if response_status else 500,
         'headers': dict(response_headers),
-        'body': response_body
+        'body': ''.join(response_body)
     }
