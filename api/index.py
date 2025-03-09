@@ -1,4 +1,5 @@
-from flask import Flask, request, redirect, render_template
+from flask import Flask, 
+request, redirect, render_template
 import random
 import string
 import requests
@@ -6,7 +7,7 @@ from bs4 import BeautifulSoup
 import json
 import sqlite3
 
-app = Flask(__name__, template_folder='../templates')
+app = Flask(__name__, template_folder='templates')
 
 DB_PATH = 'links.db'  # Ephemeral on Vercel
 
