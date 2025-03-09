@@ -9,33 +9,89 @@ import sqlite3
 
 app = Flask(__name__)
 
-# Inline templates with improved preview
+# Templates with modern, professional design
 INDEX_HTML = '''
 <!DOCTYPE html>
 <html>
 <head>
-    <title>LinkShrinker</title>
+    <title>LinkShrinker - Free URL Shortener</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background-color: #e0f7fa; }
-        h1 { color: #333; font-weight: bold; }
-        input[type="url"], input[type="text"] { padding: 8px; margin: 5px; width: 250px; }
-        button { padding: 8px 16px; background-color: #00ff00; color: #000; border: none; cursor: pointer; }
-        button:hover { background-color: #00cc00; }
-        .error { color: #ff0000; font-weight: bold; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #6dd5fa, #2980b9);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+        h1 {
+            color: #2c3e50;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #7f8c8d;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        input[type="url"], input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .stats {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
-    <h1>LinkShrinker</h1>
-    <form method="post">
-        <input type="url" name="url" placeholder="Enter URL" required>
-        <br>
-        <input type="text" name="alias" placeholder="Custom Alias (optional)">
-        <br>
-        <button type="submit">Shrink</button>
-    </form>
-    {% if error %}
-        <p class="error">{{ error }}</p>
-    {% endif %}
+    <div class="container">
+        <h1>LinkShrinker</h1>
+        <p>Shorten your URLs for free with a preview you can trust!</p>
+        <form method="post">
+            <input type="url" name="url" placeholder="Paste your long URL here" required>
+            <input type="text" name="alias" placeholder="Custom alias (optional)">
+            <button type="submit">Shrink It</button>
+        </form>
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+        <p class="stats">Links shortened: {{ visitor_count }}</p>
+    </div>
 </body>
 </html>
 '''
@@ -44,40 +100,149 @@ RESULT_HTML = '''
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Shortened URL</title>
+    <title>Your Short Link - LinkShrinker</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background-color: #e0f7fa; }
-        h1 { color: #333; font-weight: bold; }
-        a { color: #0000ff; text-decoration: none; font-size: 18px; }
-        a:hover { text-decoration: underline; }
-        .preview { margin-top: 20px; max-width: 500px; margin-left: auto; margin-right: auto; }
-        .preview img { max-width: 300px; border: 1px solid #ccc; }
-        .preview p { margin: 5px 0; word-wrap: break-word; }
-        button { padding: 8px 16px; background-color: #00ff00; color: #000; border: none; cursor: pointer; }
-        button:hover { background-color: #00cc00; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #6dd5fa, #2980b9);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+        h1 {
+            color: #2c3e50;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        .short-link {
+            background: #ecf0f1;
+            padding: 10px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+        a {
+            color: #3498db;
+            text-decoration: none;
+            font-size: 18px;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 300px;
+            background-color: white;
+            color: #333;
+            text-align: left;
+            border-radius: 8px;
+            padding: 15px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -150px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        .tooltiptext img {
+            max-width: 100%;
+            border-radius: 4px;
+        }
+        .share-options {
+            display: none;
+            margin-top: 10px;
+        }
+        .share-options button {
+            background-color: #ecf0f1;
+            color: #333;
+            padding: 8px;
+        }
+        .share-options button:hover {
+            background-color: #dcdcdc;
+        }
     </style>
     <script>
         function copyToClipboard() {
             navigator.clipboard.writeText("{{ short_url }}");
-            alert("Copied to clipboard!");
+            alert("Link copied to clipboard!");
+        }
+        function toggleShareOptions() {
+            var options = document.getElementById("share-options");
+            options.style.display = options.style.display === "block" ? "none" : "block";
+        }
+        function shareTo(platform) {
+            var url = "{{ short_url }}";
+            var shareUrl;
+            if (platform === "twitter") shareUrl = "https://twitter.com/intent/tweet?url=" + encodeURIComponent(url);
+            else if (platform === "facebook") shareUrl = "https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(url);
+            else if (platform === "linkedin") shareUrl = "https://www.linkedin.com/shareArticle?url=" + encodeURIComponent(url);
+            window.open(shareUrl, "_blank", "width=600,height=400");
         }
     </script>
 </head>
 <body>
-    <h1>Your Shortened URL</h1>
-    <p><a href="{{ short_url }}" target="_blank">{{ short_url }}</a></p>
-    <button onclick="copyToClipboard()">Share</button>
-    <div class="preview">
-        <p><strong>Title:</strong> {{ preview.title }}</p>
-        <p><strong>Description:</strong> {{ preview.description }}</p>
-        {% if preview.image %}
-            <img src="{{ preview.image }}" alt="Preview Image">
-        {% else %}
-            <img src="https://via.placeholder.com/150?text=No+Image" alt="No Image Available">
-        {% endif %}
-        {% if preview.error %}
-            <p style="color: #ff0000;">Preview Error: {{ preview.error }}</p>
-        {% endif %}
+    <div class="container">
+        <h1>Your Short Link</h1>
+        <div class="short-link tooltip">
+            <a href="{{ short_url }}">{{ short_url }}</a>
+            <div class="tooltiptext">
+                <p><strong>Title:</strong> {{ preview.title }}</p>
+                <p><strong>Description:</strong> {{ preview.description }}</p>
+                {% if preview.image %}
+                    <img src="{{ preview.image }}" alt="Preview Image">
+                {% else %}
+                    <img src="https://via.placeholder.com/150?text=No+Image" alt="No Image">
+                {% endif %}
+                {% if preview.error %}
+                    <p style="color: #e74c3c;">Error: {{ preview.error }}</p>
+                {% endif %}
+            </div>
+        </div>
+        <div>
+            <button onclick="copyToClipboard()">Copy</button>
+            <button onclick="toggleShareOptions()">Share</button>
+        </div>
+        <div id="share-options" class="share-options">
+            <button onclick="shareTo('twitter')">Twitter</button>
+            <button onclick="shareTo('facebook')">Facebook</button>
+            <button onclick="shareTo('linkedin')">LinkedIn</button>
+        </div>
     </div>
 </body>
 </html>
@@ -90,7 +255,7 @@ def init_db():
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute('''CREATE TABLE IF NOT EXISTS links 
-                     (short_code TEXT PRIMARY KEY, url TEXT, preview TEXT)''')
+                     (short_code TEXT PRIMARY KEY, url TEXT, preview TEXT, visits INTEGER DEFAULT 0)''')
         conn.commit()
     except sqlite3.OperationalError as e:
         print(f"DB init failed: {e}")
@@ -99,6 +264,14 @@ def init_db():
 
 def get_db_connection():
     return sqlite3.connect(DB_PATH)
+
+def get_visitor_count():
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM links")
+    count = c.fetchone()[0]
+    conn.close()
+    return count
 
 # Initialize DB on first request
 if not os.path.exists(DB_PATH):
@@ -109,45 +282,33 @@ def generate_short_code():
 
 def get_preview_data(url):
     try:
-        # Set a user-agent to avoid blocks
         headers = {'User-Agent': 'Mozilla/5.0 (compatible; LinkShrinker/1.0)'}
         response = requests.get(url, timeout=5, headers=headers)
-        response.raise_for_status()  # Raise exception for bad status codes
+        response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Title: OG or HTML fallback
         title = soup.find('meta', attrs={'property': 'og:title'})
         title = title['content'].strip() if title else soup.title.string.strip() if soup.title else "No Title"
         if len(title) > 100:
             title = title[:97] + "..."
 
-        # Description: OG, meta, or first paragraph
         desc = soup.find('meta', attrs={'property': 'og:description'})
         if not desc:
             desc = soup.find('meta', attrs={'name': 'description'})
-        if desc:
-            desc = desc['content'].strip()
-        else:
-            p = soup.find('p')
-            desc = p.text.strip() if p else "No description available"
+        desc = desc['content'].strip() if desc else soup.find('p').text.strip() if soup.find('p') else "No description available"
         if len(desc) > 200:
             desc = desc[:197] + "..."
 
-        # Image: OG or first img tag
         img = soup.find('meta', attrs={'property': 'og:image'})
-        if img:
-            img = img['content']
-        else:
-            img_tag = soup.find('img')
-            img = img_tag['src'] if img_tag else None
+        img = img['content'] if img else (soup.find('img')['src'] if soup.find('img') else None)
 
         return {'title': title, 'description': desc, 'image': img, 'error': None}
     except requests.RequestException as e:
-        error_msg = f"Failed to fetch preview: {str(e)}"
+        error_msg = f"Failed to fetch: {str(e)}"
         print(error_msg)
         return {'title': 'Error', 'description': 'Unable to load preview', 'image': None, 'error': error_msg}
     except Exception as e:
-        error_msg = f"Preview parsing error: {str(e)}"
+        error_msg = f"Parsing error: {str(e)}"
         print(error_msg)
         return {'title': 'Error', 'description': 'Unable to load preview', 'image': None, 'error': error_msg}
 
@@ -162,7 +323,7 @@ def home():
             c.execute("SELECT short_code FROM links WHERE short_code = ?", (alias,))
             if c.fetchone():
                 conn.close()
-                return render_template_string(INDEX_HTML, error="Alias already taken!")
+                return render_template_string(INDEX_HTML, error="Alias already taken!", visitor_count=get_visitor_count())
             short_code = alias
         else:
             short_code = generate_short_code()
@@ -178,7 +339,7 @@ def home():
         conn.close()
         short_url = f"https://{request.host}/{short_code}"
         return render_template_string(RESULT_HTML, short_url=short_url, preview=preview)
-    return render_template_string(INDEX_HTML)
+    return render_template_string(INDEX_HTML, visitor_count=get_visitor_count())
 
 @app.route('/<short_code>')
 def redirect_link(short_code):
@@ -186,7 +347,10 @@ def redirect_link(short_code):
     c = conn.cursor()
     c.execute("SELECT url FROM links WHERE short_code = ?", (short_code,))
     result = c.fetchone()
-    conn.close()
     if result:
+        c.execute("UPDATE links SET visits = visits + 1 WHERE short_code = ?", (short_code,))
+        conn.commit()
+        conn.close()
         return redirect(result[0], code=302)
+    conn.close()
     return "Link not found", 404
