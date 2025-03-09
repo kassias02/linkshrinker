@@ -1,3 +1,4 @@
+import os
 from flask import Flask, request, redirect, render_template_string
 import random
 import string
@@ -5,11 +6,10 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import sqlite3
-import os
 
 app = Flask(__name__)
 
-# Inline templates (Vercel-compatible)
+# Inline templates
 INDEX_HTML = '''
 <!DOCTYPE html>
 <html>
@@ -44,7 +44,7 @@ RESULT_HTML = '''
 </html>
 '''
 
-DB_PATH = '/tmp/links.db'  # Vercel’s writable dir
+DB_PATH = '/tmp/links.db'
 
 def init_db():
     try:
@@ -58,10 +58,12 @@ def init_db():
     finally:
         conn.close()
 
-# Call init_db() lazily, not at startup
 def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
-    return conn
+    return sqlite3.connect(DB_PATH)
+
+# Initialize DB on first request
+if not os.path.exists(DB_PATH):
+    init_db()
 
 def generate_short_code():
     return ''.join(random.choices(string.ascii_letters + string.digits, k=6))
@@ -79,10 +81,6 @@ def get_preview_data(url):
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    # Initialize DB on first request
-    if not os.path.exists(DB_PATH):
-        init_db()
-    
     if request.method == 'POST':
         long_url = request.form['url']
         alias = request.form.get('alias', '').strip()
@@ -121,6 +119,29 @@ def redirect_link(short_code):
         return redirect(result[0], code=302)
     return "Link not found", 404
 
+# Vercel handler
 def handler(event, context):
-    from wsgiref.handlers import CGIHandler
-    return CGIHandler().run(app)
+    from flask import Response
+    import sys
+    from io import StringIO
+    
+    # Capture Flask output
+    old_stdout = sys.stdout
+    sys.stdout = StringIO()
+    
+    # Run Flask app
+    response = app(event['requestContext']['http'], lambda status, headers: None)
+    
+    # Get response body
+    body = sys.stdout.getvalue()
+    sys.stdout = old_stdout
+    
+    # Extract status and headers from Flask response
+    status_code = int(response.status.split()[0])
+    headers = dict(response.headers)
+    
+    return {
+        'statusCode': status_code,
+        'headers': headers,
+        'body': body
+    }
