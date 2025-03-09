@@ -9,19 +9,19 @@ import sqlite3
 
 app = Flask(__name__)
 
-# Inline templates with colors and styling
+# Inline templates with corrected colors and styling
 INDEX_HTML = '''
 <!DOCTYPE html>
 <html>
 <head>
     <title>LinkShrinker</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background-color: #f0f0f0; }
-        h1 { color: #333; }
-        input[type="url"], input[type="text"] { padding: 10px; margin: 5px; width: 300px; }
-        button { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }
-        button:hover { background-color: #45a049; }
-        .error { color: red; }
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background-color: #e0f7fa; }
+        h1 { color: #333; font-weight: bold; }
+        input[type="url"], input[type="text"] { padding: 8px; margin: 5px; width: 250px; }
+        button { padding: 8px 16px; background-color: #00ff00; color: #000; border: none; cursor: pointer; }
+        button:hover { background-color: #00cc00; }
+        .error { color: #ff0000; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -46,17 +46,33 @@ RESULT_HTML = '''
 <head>
     <title>Shortened URL</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background-color: #f0f0f0; }
-        h1 { color: #333; }
-        a { color: #0066cc; text-decoration: none; font-size: 20px; }
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background-color: #e0f7fa; }
+        h1 { color: #333; font-weight: bold; }
+        a { color: #0000ff; text-decoration: none; font-size: 18px; }
         a:hover { text-decoration: underline; }
-        p { margin: 10px 0; }
+        .preview { margin-top: 20px; }
+        .preview img { max-width: 300px; }
+        button { padding: 8px 16px; background-color: #00ff00; color: #000; border: none; cursor: pointer; }
+        button:hover { background-color: #00cc00; }
     </style>
+    <script>
+        function copyToClipboard() {
+            navigator.clipboard.writeText("{{ short_url }}");
+            alert("Copied to clipboard!");
+        }
+    </script>
 </head>
 <body>
     <h1>Your Shortened URL</h1>
     <p><a href="{{ short_url }}" target="_blank">{{ short_url }}</a></p>
-    <p>Preview: {{ preview.title }}</p>
+    <button onclick="copyToClipboard()">Share</button>
+    <div class="preview">
+        <p><strong>Title:</strong> {{ preview.title }}</p>
+        <p><strong>Description:</strong> {{ preview.description }}</p>
+        {% if preview.image %}
+            <img src="{{ preview.image }}" alt="Preview Image">
+        {% endif %}
+    </div>
 </body>
 </html>
 '''
@@ -89,11 +105,14 @@ def get_preview_data(url):
     try:
         response = requests.get(url, timeout=5)
         soup = BeautifulSoup(response.text, 'html.parser')
-        title = soup.title.string if soup.title else "No Title"
-        desc = soup.find('meta', attrs={'name': 'description'})['content'] if soup.find('meta', attrs={'name': 'description'}) else "No description"
-        img = soup.find('meta', attrs={'property': 'og:image'})['content'] if soup.find('meta', attrs={'property': 'og:image'}) else None
+        title = soup.title.string.strip() if soup.title else "No Title"
+        desc = soup.find('meta', attrs={'name': 'description'})
+        desc = desc['content'].strip() if desc else "No description available"
+        img = soup.find('meta', attrs={'property': 'og:image'})
+        img = img['content'] if img else None
         return {'title': title, 'description': desc, 'image': img}
-    except Exception:
+    except Exception as e:
+        print(f"Preview error: {e}")
         return {'title': 'Error', 'description': 'Unable to load preview', 'image': None}
 
 @app.route('/', methods=['GET', 'POST'])
