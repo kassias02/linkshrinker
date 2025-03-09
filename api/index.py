@@ -118,7 +118,3 @@ def redirect_link(short_code):
     if result:
         return redirect(result[0], code=302)
     return "Link not found", 404
-
-# Vercel requires this to be named `app` for Python deployments
-if __name__ == '__main__':
-    app.run(debug=True)
