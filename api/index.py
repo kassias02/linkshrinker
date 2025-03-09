@@ -6,8 +6,6 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import sqlite3
-from io import StringIO
-import sys
 
 app = Flask(__name__)
 
@@ -120,52 +118,3 @@ def redirect_link(short_code):
     if result:
         return redirect(result[0], code=302)
     return "Link not found", 404
-
-# Vercel handler
-def handler(event, context):
-    # Build WSGI environ
-    environ = {
-        'REQUEST_METHOD': event.get('httpMethod', 'GET'),
-        'PATH_INFO': event.get('path', '/'),
-        'QUERY_STRING': '&'.join(f"{k}={v}" for k, v in event.get('queryStringParameters', {}).items()) if event.get('queryStringParameters') else '',
-        'CONTENT_LENGTH': str(len(event.get('body', ''))),
-        'SERVER_NAME': event.get('headers', {}).get('host', 'vercel'),
-        'SERVER_PORT': '443',
-        'SERVER_PROTOCOL': 'HTTP/1.1',
-        'wsgi.version': (1, 0),
-        'wsgi.url_scheme': 'https',
-        'wsgi.input': StringIO(event.get('body', '')),
-        'wsgi.errors': sys.stderr,
-        'wsgi.multithread': False,
-        'wsgi.multiprocess': False,
-        'wsgi.run_once': False,
-    }
-    if event.get('headers'):
-        for key, value in event['headers'].items():
-            environ[f'HTTP_{key.upper().replace("-", "_")}'] = value
-
-    # Capture response
-    response_body = []
-    response_status = None
-    response_headers = []
-
-    def start_response(status, headers):
-        nonlocal response_status, response_headers
-        response_status = status
-        response_headers = headers
-
-    # Run Flask app
-    try:
-        response_body = app(environ, start_response)
-    except Exception as e:
-        return {
-            'statusCode': 500,
-            'headers': {'Content-Type': 'text/plain'},
-            'body': f"Internal Server Error: {str(e)}"
-        }
-
-    return {
-        'statusCode': int(response_status.split()[0]) if response_status else 500,
-        'headers': dict(response_headers),
-        'body': ''.join(response_body)
-    }
