@@ -9,8 +9,8 @@ import os
 
 app = Flask(__name__, template_folder='/Users/hassan/Downloads/SHrinklin/templates')
 
-# Use Render's disk path for SQLite
-DB_PATH = '/data/links.db' if os.path.exists('/data') else 'links.db'
+# Use Heroku's tmp dir for SQLite (ephemeral for now)
+DB_PATH = 'links.db'
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -68,7 +68,7 @@ def home():
         conn.commit()
         conn.close()
         
-        short_url = f"https://{request.host}/{short_code}"
+        short_url = f"https://{request.host}/{short_code}" if 'herokuapp' in request.host else f"http://127.0.0.1:5000/{short_code}"
         return render_template('result.html', short_url=short_url, preview=preview, preview_json=preview_json)
     return render_template('index.html')
 
@@ -84,5 +84,5 @@ def redirect_link(short_code):
     return "Link not found", 404
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))  # Render uses 10000 by default
+    port = int(os.environ.get("PORT", 5000))  # Heroku dynamic port
     app.run(host="0.0.0.0", port=port, debug=True)
